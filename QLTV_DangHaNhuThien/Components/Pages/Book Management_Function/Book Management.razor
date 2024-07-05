@@ -1,0 +1,242 @@
+﻿@page "/BookManagement"
+
+
+@using QLTV_DangHaNhuThien.Components.Layout
+@using Microsoft.AspNetCore.Authorization
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@rendermode InteractiveServer
+
+@inject IConnectDapper ConnectDapper
+@attribute [Authorize(Roles = "Admin")]
+@inject NavigationManager navigationManager
+<MudPaper Class="center-text" Elevation="4">
+    <MudText Typo="Typo.h3" Class="center-text" Style="font-family: 'Times New Roman';">
+        Quản lý sách
+    </MudText>
+</MudPaper>
+
+<style>
+    .center-text {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+</style>
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <div class="inputsearch-container">
+            <input type="text" name="text" class="inputsearch" placeholder="Tìm kiếm sách..." @bind="searchKeyword" @bind:event="oninput">
+
+            <span class="iconsearch" @onclick="SearchBooks">
+                <svg width="19px" height="19px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path opacity="1" d="M14 5H20" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path opacity="1" d="M14 8H17" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M21 11.5C21 16.75 16.75 21 11.5 21C6.25 21 2 16.75 2 11.5C2 6.25 6.25 2 11.5 2" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path opacity="1" d="M22 22L20 20" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+            </span>
+        </div>
+        <div class="mainpage">
+
+            @if (booklist == null || booklist.Count == 0)
+            {
+                <div aria-label="Orange and tan hamster running in a metal wheel" role="img" class="wheel-and-hamster">
+                    <div class="wheel"></div>
+                    <div class="hamster">
+                        <div class="hamster__body">
+                            <div class="hamster__head">
+                                <div class="hamster__ear"></div>
+                                <div class="hamster__eye"></div>
+                                <div class="hamster__nose"></div>
+                            </div>
+                            <div class="hamster__limb hamster__limb--fr"></div>
+                            <div class="hamster__limb hamster__limb--fl"></div>
+                            <div class="hamster__limb hamster__limb--br"></div>
+                            <div class="hamster__limb hamster__limb--bl"></div>
+                            <div class="hamster__tail"></div>
+                        </div>
+                    </div>
+                    <div class="spoke"></div>
+                </div>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Tertiary" @onclick="Createbook">Thêm Sách Mới</MudButton>
+
+                <style>
+                    .button {
+                        height: 50px;
+                        width: 150px;
+                        border: none;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        position: relative;
+                        overflow: hidden;
+                        transition: all 0.5s ease-in-out;
+                    }
+
+                        .button:hover {
+                            box-shadow: .5px .5px 150px #252525;
+                        }
+
+                    .type1::after {
+                        content: "Bấm vào";
+                        height: 50px;
+                        width: 150px;
+                        background-color: #34974d;
+                        color: #fff;
+                        position: absolute;
+                        top: 0%;
+                        left: 0%;
+                        transform: translateY(50px);
+                        font-size: 1.2rem;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: all 0.5s ease-in-out;
+                    }
+
+                    .type1::before {
+                        content: "Thêm Sách";
+                        height: 50px;
+                        width: 150px;
+                        background-color: #fff;
+                        color: #34974d;
+                        position: absolute;
+                        top: 0%;
+                        left: 0%;
+                        transform: translateY(0px) scale(1.2);
+                        font-size: 1.2rem;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: all 0.5s ease-in-out;
+                    }
+
+                    .type1:hover::after {
+                        transform: translateY(0) scale(1.2);
+                    }
+
+                    .type1:hover::before {
+                        transform: translateY(-50px) scale(0) rotate(120deg);
+                    }
+                </style>
+                @* read data from database and show them to table *@
+                <div>
+                    <table class="table table-bordered">
+                        <thead>
+                            @* header *@
+                            <MudTr>
+	                            <th>Mã sách</th>
+                                <th>Tên sách</th>
+                                <th>Tác giả</th>
+                                <th>Nhà xuất bản</th>
+                                <th>Năm xuất bản</th>
+                                <th>Thể loại</th>
+                                <th>Mô tả</th>
+                                <th>Sửa</th>
+                                <th>Xóa</th>
+                                <th>Hình ảnh</th>
+
+                            </MudTr>
+                        </thead>
+
+                        <tbody>
+                            @* body *@
+                            @foreach (var book in booklist)
+                            {
+                                <MudTr>
+                                    <MudTd>@book.Id</MudTd>
+                                    <MudTd>@book.Title</MudTd>
+                                    <MudTd>@book.Author</MudTd>
+                                    <MudTd>@book.Publisher</MudTd>
+                                    <MudTd>@book.PublishedDate.ToString("dd/MM/yyyy")</MudTd>
+                                    <MudTd>@book.Category</MudTd>
+                                    <MudTd>@book.Description</MudTd>
+                                    <MudTd>
+
+                                        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Update" Color="Color.Tertiary" @onclick="@(() => Editbook(book.Id))">Sửa</MudButton>
+
+                                    </MudTd>
+                                    <MudTd>
+   
+                                        <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error" @onclick="@(() => Deletebook(book.Id))">Xóa</MudButton>
+
+                                    </MudTd>
+                                    <MudImage Src="@GetImageSourceFromBase64(book.ImagePath)" Alt="Book image" Elevation="25" Class="card-img-top" />
+
+                                </MudTr>
+                            }
+
+
+                        </tbody>
+
+                    </table>
+
+
+                </div>
+
+
+
+                @* read data from database and show them to table *@
+
+
+
+            }
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code {
+
+
+    public string searchKeyword { get; set; } = string.Empty;
+    async Task SearchBooks()
+    {
+        if (string.IsNullOrEmpty(searchKeyword))
+        {
+            booklist = await ConnectDapper.GetBookListAsync(0);
+        }
+        else
+        {
+            booklist = (await ConnectDapper.SearchBooksAsync(searchKeyword)).ToList();
+        }
+    }
+
+	// Phương thức chuyển đổi từ chuỗi Base64 thành đường dẫn URL của hình ảnh
+	public string GetImageSourceFromBase64(string base64String)
+	{
+		if (string.IsNullOrEmpty(base64String))
+			return "";
+
+		return $"data:image/png;base64,{base64String}";
+	}
+    // get all book list
+    List<Book>? booklist = new List<Book>();
+
+    protected override async Task OnInitializedAsync()
+    { //getbook list
+        booklist = await ConnectDapper.GetBookListAsync(0);
+    }
+
+    //event Create, Update and Delete
+    void Editbook(int id)
+    {
+        navigationManager.NavigateTo($"/BookC&U/{id}");
+    }
+
+
+    void Createbook()
+    {
+        navigationManager.NavigateTo("/BookC&U");
+    }
+
+
+    async Task Deletebook(int id)
+    {
+        await ConnectDapper.DeleteNewBookAsync(id);
+        navigationManager.NavigateTo(navigationManager.Uri, forceLoad: true);
+
+    }
+
+
+}

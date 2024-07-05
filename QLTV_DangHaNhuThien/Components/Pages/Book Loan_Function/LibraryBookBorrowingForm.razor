@@ -1,0 +1,123 @@
+﻿@page "/Bookloan"
+@using Microsoft.AspNetCore.Authorization
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@inject NavigationManager NavigationManager
+@inject IConnectDapper ConnectDapper
+@attribute [Authorize(Roles = "Member")]
+@rendermode InteractiveServer
+<MudPaper Class="center-text" Elevation="4">
+    <MudText Typo="Typo.h3" Class="center-text" Style="font-family: 'Times New Roman';">
+        Danh sách các loại sách
+    </MudText>
+</MudPaper>
+
+<style>
+    .center-text {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+</style>
+<div class="addbook_form">
+    <div class="addbook_form_body">
+        <AuthorizeView Roles="Member">
+            <Authorized>
+                <div class="inputsearch-container">
+                    <input type="text" name="text" class="inputsearch" placeholder="Tìm kiếm sách..." @bind="searchKeyword" @bind:event="oninput">
+
+                    <span class="iconsearch" @onclick="SearchBooks">
+                        <svg width="19px" height="19px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path opacity="1" d="M14 5H20" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path opacity="1" d="M14 8H17" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M21 11.5C21 16.75 16.75 21 11.5 21C6.25 21 2 16.75 2 11.5C2 6.25 6.25 2 11.5 2" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path opacity="1" d="M22 22L20 20" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+                    </span>
+                </div>
+
+                <div>
+                    @* Hiển thị danh sách sách *@
+                    <div class="row">
+                        @foreach (var book in filteredBooks)
+	                    {
+		                    <div class="col-md-4 mb-4">
+			                    <div class="card h-100 d-flex flex-column justify-content-between">
+                                    <MudImage Src="@GetImageSourceFromBase64(book.ImagePath)" Alt="Book image" Elevation="25" Class="card-img-top fixed-size-image" />
+
+				                    <style>
+                                        .fixed-size-image {
+                                            width: 150px;
+                                            height: 150px;
+                                            object-fit: cover; /* Đảm bảo ảnh không bị bóp méo và lấp đầy toàn bộ khu vực */
+                                            display: block; /* Đảm bảo ảnh là một phần tử block */
+                                            margin: 0 auto; /* Canh giữa theo chiều ngang */
+                                        }
+
+                                     </style>
+				                    <div class="card-body d-flex flex-column justify-content-between">
+					                    <h5 class="card-title text-center">@book.Title</h5>
+					                    <div class="mt-auto">
+                                            <div>
+                                                <MudButton Variant="Variant.Filled" Class="btn" StartIcon="@Icons.Material.Filled.Info" IconColor="Color.Secondary" Size="Size.Large " @onclick="@(() => ShowBookDetails(book.Id))">
+                                                    <MudIcon Class="animation"></MudIcon>Chi Tiết<MudIcon Class="animation"></MudIcon>
+                                                    </MudButton>
+
+                                            </div>
+					                    </div>
+				                    </div>
+			                    </div>
+		                    </div>
+	                    }
+                    </div>
+
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+</div>
+
+@code {
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    public string searchKeyword { get; set; } = string.Empty;
+    async Task SearchBooks()
+    {
+        if (string.IsNullOrEmpty(searchKeyword))
+        {
+            filteredBooks = booklistAvailable;
+        }
+        else
+        {
+            filteredBooks = (await ConnectDapper.SearchBooksAsync(searchKeyword)).ToList();
+        }
+    }
+
+    // Danh sách sách
+    List<Book> booklist = new List<Book>();
+    List<Book> booklistAvailable = new List<Book>();
+    List<Book> filteredBooks = new List<Book>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Lấy danh sách sách
+        booklist = await ConnectDapper.GetBookListAsync(0);
+
+        // Lấy danh sách sách có sẵn
+        booklistAvailable = await ConnectDapper.GetBookListAvailableAsync();
+
+        filteredBooks = booklistAvailable.ToList(); // Đảm bảo khởi tạo filteredBooks với giá trị ban đầu
+
+    }
+
+    void ShowBookDetails(int bookId)
+    {
+        NavigationManager.NavigateTo($"/BookDetail/{bookId}");
+    }
+
+    // Phương thức chuyển đổi từ chuỗi Base64 thành đường dẫn URL của hình ảnh
+    public string GetImageSourceFromBase64(string base64String)
+    {
+        if (string.IsNullOrEmpty(base64String))
+            return "";
+
+        return $"data:image/png;base64,{base64String}";
+    }
+}

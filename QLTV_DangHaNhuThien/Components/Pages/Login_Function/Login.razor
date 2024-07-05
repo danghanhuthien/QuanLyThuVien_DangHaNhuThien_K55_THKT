@@ -1,0 +1,150 @@
+﻿@page "/dung"
+@using Dapper
+@using QLTV_DangHaNhuThien.Components.Data
+@using System.Security.Claims
+@using QLTV_DangHaNhuThien.Components.Layout
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using System.Data.SqlClient
+@inject NavigationManager navigationManager
+@*@layout LayoutLogin
+  *@
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@inject IConnectDapper ConnectDapper
+
+
+<div class="background-container">
+    <video autoplay muted loop playsinline class="background-video">
+        <source src="Video/thuvienhanhlang.mp4" type="video/mp4">
+    </video>
+</div>
+<style>
+    .background-container {
+        position: fixed;
+        top: 0;
+        left: 50;
+        width: 100%;
+        height: 100%;
+        overflow: hidden; /* Đảm bảo không có phần nào của video bị cắt bỏ */
+    }
+
+    .background-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Đảm bảo video lấp đầy khung hình mà không bị biến dạng */
+    }
+
+
+</style>
+<EditForm Model="@user" OnValidSubmit="Authenticate" FormName="Login_form">
+    <div class="form">
+        <div class="form-title"><span>Đăng Nhập</span></div>
+        <div class="title-2"><span>Hệ Thống</span></div>
+        <div class="input-container">
+            <InputText @bind-Value="user.Username" type="text" class="input-mail" placeholder="Tên đăng nhập" />
+            <ValidationMessage For="() => user.Username" /> @* Hoạt động bình thường trong EditForm *@
+            <span></span>
+        </div>
+
+        <section class="bg-stars">
+            <span class="star"></span>
+            <span class="star"></span>
+            <span class="star"></span>
+            <span class="star"></span>
+        </section>
+
+        <div class="input-container">
+            <InputText @bind-Value="user.Password" type="password" class="input-pwd" placeholder="Mật khẩu" />
+            <ValidationMessage For="() => user.Password" /> @* Hoạt động bình thường trong EditForm *@
+        </div>
+
+        <button type="submit" class="submit">
+            <span class="sign-text">Ok</span>
+        </button>
+
+        <p class="signup-link">Bạn chưa có tài khoản?
+            <a href="/Register" class="up">Tạo tài khoản</a>
+        </p>
+        <p class="signup-link">Bạn đã quên mật khẩu?
+            <a href="/forgotpassword" class="up">Quên mật khẩu</a>
+        </p>
+        <div>
+            @if (!string.IsNullOrEmpty(error))
+            {
+                <div class="error-message">@error</div>
+            }
+        </div>
+        <style>
+            .input-container {
+              display: flex;
+              width: 100%; /* Hoặc một giá trị cụ thể, ví dụ: 300px */
+            }
+
+            .input-mail, 
+            .input-pwd {
+              flex-grow: 1; /* Cho phép input mở rộng để chiếm không gian còn lại */
+              margin-right: 10px; /* Khoảng cách giữa input và button */
+            }
+
+            .input-mail, .input-pwd {
+                padding: 0;
+                margin: 0;
+                /* ... các thuộc tính CSS khác */
+            }
+
+            .input-mail, .input-pwd {
+                box-sizing: border-box;
+                /* ... các thuộc tính CSS khác */
+            }
+
+            .error-message {
+                color: #ff0000; /* Màu chữ đỏ */
+                font-size: 0.875rem; /* Kích thước font nhỏ hơn */
+                font-weight: 500; /* Độ đậm của font */
+                margin-top: 8px; /* Khoảng cách từ các phần tử xung quanh */
+            }
+        </style>
+
+    </div>
+</EditForm>
+
+@code {
+    
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+
+    [SupplyParameterFromForm]
+    public User user { get; set; } = new();
+
+    private string? error;
+
+    //Authentication
+    private async Task Authenticate()
+    {
+        var userAccount = await ConnectDapper.GetUserByUsernameAndPassword(user.Username, user.Password);
+        if (userAccount == null)
+        {
+            error = "Tài khoản hoặc mật khẩu của bạn đã sai.Vui lòng thử lại!";
+            return; // Thoát phương thức nếu userAccount là null
+        }
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Role, userAccount.Role)
+        };
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+        if (HttpContext != null)
+        {
+            await HttpContext.SignInAsync(principal);
+            navigationManager.NavigateTo("/home");
+        }
+        else
+        {
+            // Xử lý trường hợp HttpContext là null
+            error = "Tài khoản mật khẩu sai";
+        }
+    }
+}

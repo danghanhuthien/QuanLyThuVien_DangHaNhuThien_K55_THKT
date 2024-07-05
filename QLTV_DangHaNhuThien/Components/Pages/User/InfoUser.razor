@@ -1,0 +1,108 @@
+﻿@page "/Infouser"
+@page "/Infouser/{Id:int}"
+@inject NavigationManager navigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using QLTV_DangHaNhuThien.Components.Layout
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@inject IConnectDapper ConnectDapper
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Authorization
+
+<EditForm Model="@currentuser" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <MudGrid>
+        <MudItem xs="12" sm="7">
+            <MudCard>
+                <MudCardContent>
+                    <MudTextField Label="ID" Disabled="true" @bind-Value="currentuser.Id" />
+                    <MudTextField Label="Username" @bind-Value="currentuser.Username" />
+                    <MudTextField Label="Password" Class="mt-3" @bind-Value="currentuser.Password" InputType="InputType.Password" />
+                    <MudTextField Label="FullName" Class="mt-3" @bind-Value="currentuser.FullName" />
+                    <MudTextField Label="Email" Class="mt-3" @bind-Value="currentuser.Email" />
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Save" Color="Color.Primary" ButtonType="ButtonType.Submit" Class="ml-auto">
+                        Cập nhật
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Home" Color="Color.Warning" ButtonType="ButtonType.Submit" Class="ml-auto" @onclick="@(() => navigationManager.NavigateTo("/"))">
+                        Trở về
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudPaper Class="pa-4 mud-height-full">
+                <MudText Typo="Typo.subtitle2">Validation Summary</MudText>
+                @if (success)
+                {
+                    <MudText Color="Color.Success">Cập nhật thành công</MudText>
+                }
+                else
+                {
+                    <MudText Color="@Color.Error">
+                        <ValidationSummary />
+                    </MudText>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12">
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                Hãy điền đầy đủ thông tin để cập nhật người dùng.
+            </MudText>
+        </MudItem>
+    </MudGrid>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    [SupplyParameterFromForm]
+    public User currentuser { get; set; } = new();
+
+    bool success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            // Example: Get user's Id from claims (you should adjust this based on how your claims are structured)
+            var userIdClaim = user.FindFirst("Id")?.Value;
+            if (!string.IsNullOrEmpty(userIdClaim))
+            {
+                if (Id == null || Id == 0)
+                {
+                    Id = int.Parse(userIdClaim);
+                }
+                currentuser = await ConnectDapper.GetUserByIdAsync(Id.Value);
+            }
+            else
+            {
+                // Handle case where UserId claim is missing or invalid
+            }
+        }
+        else
+        {
+            // Handle if user is not authenticated
+        }
+    }
+
+    async Task HandleSubmit()
+    {
+        try
+        {
+            await ConnectDapper.UpdateNewUserAsync(currentuser, currentuser.Id);
+            success = true;
+        }
+        catch (Exception ex)
+        {
+            // Xử lý lỗi nếu cần thiết
+            success = false;
+            Console.WriteLine($"Lỗi khi cập nhật người dùng: {ex.Message}");
+        }
+    }
+}

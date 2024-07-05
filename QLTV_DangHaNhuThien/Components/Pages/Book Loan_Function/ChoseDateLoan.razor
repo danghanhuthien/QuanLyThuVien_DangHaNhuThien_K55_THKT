@@ -1,0 +1,57 @@
+﻿@page "/Chosedate_CUD"
+@page "/Chosedate_CUD/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager navigationManager
+@inject IUserService UserService
+@attribute [Authorize(Roles = "Member")]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+
+<div class="addbook_form">
+    <AuthorizeView Roles="Member" Context="authContext">
+        <Authorized>
+            <div class="addbook_form_body">
+                <MudForm Model="@currentbook">
+                    <div class="form-outline mb-4">
+                        <MudText Typo="Typo.body1">Vui lòng chọn ngày trả sách</MudText>
+                        <InputDate @bind-Value="currentbook.DueDate" @bind-Value:format="dd/MM/yyyy" MinDate="DateTime.Now.AddDays(1)"  class="form-control" />
+                        @if (errorMessage != null)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Error">@errorMessage</MudText>
+                        }
+                    </div>
+                    <MudButton Variant="Variant.Filled" type="button" EndIcon="@Icons.Material.Filled.Favorite" Color="Color.Success" @onclick="HandleSubmit" Class="btn btn-primary">
+                        Xác nhận
+                    </MudButton>
+                </MudForm>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+@code {
+    [Parameter]
+    public int Id { get; set; }
+    [CascadingParameter] 
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    public BorrowingRecord currentbook { get; set; } = new BorrowingRecord { DueDate = DateTime.Today };
+
+    private string errorMessage;
+
+    async Task HandleSubmit()
+    {
+        errorMessage = null; // Reset error message
+
+        if (currentbook.DueDate <= DateTime.Today)
+        {
+            errorMessage = "Ngày trả sách phải là ngày tương lai.";
+            return;
+        }
+
+        var authenticationState = await authenticationStateTask;
+        // Add
+        await UserService.AddBookLoanAsync(currentbook, authenticationState.User.Identity.Name, Id);
+        navigationManager.NavigateTo("/infRequest");
+
+    }
+
+}

@@ -1,0 +1,33 @@
+﻿
+/* Đảm bảo cả thẻ html và body chiếm toàn bộ chiều cao màn hình (viewport height) */
+html, body {
+    height: 100vh;
+    margin: 0; /* Loại bỏ margin mặc định của body để tránh khoảng trắng thừa */
+}
+
+.empty-layout { /* Hoặc .login_box */
+    display: grid;
+    place-items: center; /* Căn giữa cả theo chiều ngang và chiều dọc */
+    height: 100vh;
+}
+/* Định dạng phần tử chứa form đăng nhập (ví dụ: .login_box) và thẻ card (nếu có) */
+.login_box, .card {
+    display: flex; /* Sử dụng Flexbox để dễ dàng căn chỉnh các phần tử con */
+    flex-direction: column; /* Sắp xếp các phần tử con theo chiều dọc */
+    justify-content: center; /* Căn giữa các phần tử con theo chiều dọc */
+    align-items: center; /* Căn giữa các phần tử con theo chiều ngang */
+    min-height: 100vh; /* Đảm bảo phần tử này luôn có chiều cao tối thiểu bằng chiều cao màn hình */
+}
+
+/* Định dạng video nền */
+.background-video {
+    position: absolute; /* Cho phép video được định vị tuyệt đối trong phần tử cha (.empty-layout) */
+    top: 0; /* Đặt video ở góc trên cùng */
+    left: 0; /* Đặt video ở góc trái cùng */
+    min-width: 100%; /* Đảm bảo video luôn rộng ít nhất bằng container */
+    min-height: 100%; /* Đảm bảo video luôn cao ít nhất bằng container */
+    width: auto; /* Cho phép video tự động điều chỉnh chiều rộng để giữ nguyên tỷ lệ */
+    height: auto; /* Cho phép video tự động điều chỉnh chiều cao để giữ nguyên tỷ lệ */
+    z-index: -1; /* Đặt video làm nền ở dưới nội dung khác */
+    object-fit: cover; /* Thu nhỏ hoặc phóng to video để vừa với container, đồng thời vẫn giữ nguyên tỷ lệ khung hình của video */
+}

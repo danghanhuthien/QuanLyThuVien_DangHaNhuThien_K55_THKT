@@ -1,0 +1,141 @@
+﻿@page "/BookC&U"
+@page "/BookC&U/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@inject NavigationManager navigationManager
+@inject IConnectDapper ConnectDapper
+@attribute [Authorize(Roles = "Admin")]
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+
+@if (Id is null)
+{
+    <PageTitle>New Book</PageTitle>
+
+
+    //add new book form
+
+
+}
+else
+{
+    <PageTitle>Edit Book</PageTitle>
+}
+
+@* //add new book form // edits form *@
+<MudPaper Class="center-text" Elevation="4">
+    <MudText Typo="Typo.h3" Class="center-text" Style="font-family: 'Times New Roman';">
+        Thêm sách mới
+    </MudText>
+</MudPaper>
+
+<style>
+    .center-text {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+</style>
+<div class="addbook_form">
+    <AuthorizeView Roles="Admin" Context="authContext">
+        <Authorized>
+            <div class="addbook_form_body">
+                <EditForm OnSubmit="HandleSubmit" Model="@currentbook">
+	                <div class="form-outline mb-4">
+		                <label>Tên sách</label>
+		                <InputText @bind-Value="currentbook.Title" type="text" class="form-control" />
+
+		                <label>Tác giả</label>
+		                <InputText @bind-Value="currentbook.Author" type="text" class="form-control" />
+
+		                <label>Nhà xuất bản</label>
+		                <InputText @bind-Value="currentbook.Publisher" type="text" class="form-control" />
+
+		                <label>Năm xuất bản</label>
+		                <InputDate @bind-Value="currentbook.PublishedDate" @bind-Value:format="dd/MM/yyyy" class="form-control" />
+
+		                <label>Thể loại</label>
+		                <InputSelect  @bind-Value="currentbook.Category" class="form-select" aria-label="Default select example">
+			                <option selected>Lựa chọn</option>
+			                @foreach (var category in Categorylist)
+			                {
+				                <option value="@category.Name">@category.Name</option>
+			                }
+		                </InputSelect>
+                        
+		                <label>Hình ảnh</label>
+		                <InputFile OnChange="HandleFileSelected" class="form-control" />
+
+		                <div class="mb-3">
+			                <label for="exampleFormControlTextarea1" class="form-label">Mô tả</label>
+			                <textarea @bind="currentbook.Description" class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+		                </div>
+	                </div>
+                    <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Save" Color="Color.Info" ButtonType="ButtonType.Submit" Class="buttonluu">
+                        Lưu
+                    </MudButton>
+	                
+                </EditForm>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+	    var file = e.File;
+	    using (var memoryStream = new MemoryStream())
+	    {
+		    await file.OpenReadStream().CopyToAsync(memoryStream);
+		    var buffer = memoryStream.ToArray();
+		    currentbook. ImagePath = Convert.ToBase64String(buffer);
+	    }
+    }
+
+    public Book currentbook { get; set; } = new Book {PublishedDate = DateTime.Today};
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id is not null)
+        {
+            var editbook = await ConnectDapper.GetBookByIdAsync((int)Id);
+            if (editbook is not null)
+                currentbook = editbook;
+        }
+    }
+
+
+    //get all Category
+    List<Categorie> Categorylist = new List<Categorie>();
+    protected override async Task OnInitializedAsync()
+    {
+        //getbook list
+        Categorylist = await ConnectDapper.GetCategoryListAsync();
+    }
+
+
+
+    //add book function
+    async Task HandleSubmit()
+    {
+        if (Id is not null)
+        {
+            //update
+            await ConnectDapper.UpdateNewBookAsync(currentbook, (int)Id);
+            navigationManager.NavigateTo("/BookManagement");
+        }
+        else
+        {
+            //add book
+            currentbook.Available = true;
+            await ConnectDapper.AddNewBookAsync(currentbook);
+            navigationManager.NavigateTo("/BookManagement");
+        }
+    }
+}

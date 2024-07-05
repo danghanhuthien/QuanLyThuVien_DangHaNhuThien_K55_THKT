@@ -1,0 +1,79 @@
+﻿@page "/home"
+@rendermode InteractiveServer
+
+<marquee style="color:white; font-size:30px;" direction="left" scrollamount="10" onmouseover="this.stop();" onmouseout="this.start();" bgcolor="#2D4E93">
+    <strong>
+        Chào mừng bạn đến với trang web thư viện của chúng tôi!
+        &nbsp;&nbsp;&nbsp;
+    </strong>
+</marquee>
+<MudCarousel Class="mud-width-full" @ref="_carousel" ItemsSource="@_source" @bind-SelectedIndex="selectedIndex" Style="height:400px;" ShowArrows="@_arrows" ShowBullets="@_bullets" EnableSwipeGesture="@_enableSwipeGesture" AutoCycle="@_autocycle">
+    <ItemTemplate>
+        <div class="d-flex flex-column justify-center" style="height:100%">
+            <img src="@context" class="mx-auto" style="max-height: 100%; max-width: 100%;" />
+        </div>
+        <br />
+
+    </ItemTemplate>
+</MudCarousel>
+<div class="landing-page">
+    <div class="video-gallery">
+        <video width="1280" height="720" controls>
+            <source src="video/chill.mp4" type="video/mp4">
+            Trình duyệt của bạn không hỗ trợ thẻ video.
+        </video>
+    </div>
+</div>
+
+<style>
+    .landing-page {
+        text-align: center;
+    }
+
+    .image-gallery img {
+        margin: 10px;
+        width: 200px;
+        height: auto;
+    }
+
+    .video-gallery video {
+        margin: 10px;
+    }
+</style>
+
+<br />
+@code {
+    private MudCarousel<string> _carousel;
+    private bool _arrows = true;
+    private bool _bullets = true;
+    private bool _enableSwipeGesture = true;
+    private bool _autocycle = true;
+    private IList<string> _source = new List<string>()
+    {
+        "Image/anh10.jpg",
+        "Image/anh11.png",
+        "Image/anh12.jpg",
+        "Image/anh6.jpg",
+         "Image/anh7.jpg",
+         "Image/anh8.jpg"
+
+    };
+    private int selectedIndex = 2;
+
+    private async Task AddAsync()
+    {
+        _source.Add($"images/image{_source.Count + 1}.jpg");
+        await Task.Delay(1);
+        _carousel.MoveTo(_source.Count - 1);
+    }
+
+    private async Task DeleteAsync(int index)
+    {
+        if (_source.Any())
+        {
+            _source.RemoveAt(index);
+            await Task.Delay(1);
+            _carousel.MoveTo(System.Math.Max(System.Math.Min(index, _source.Count - 1), 0));
+        }
+    }
+}

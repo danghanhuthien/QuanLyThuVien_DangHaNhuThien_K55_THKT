@@ -1,0 +1,159 @@
+﻿@page "/feedbackreturn"
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+
+@inject IUserService UserService
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,Member")]
+<MudPaper Class="center-text" Elevation="4">
+    <MudText Typo="Typo.h3" Class="center-text" Style="font-family: 'Times New Roman';">
+        Thông tin yêu cầu trả sách
+    </MudText>
+</MudPaper>
+
+<style>
+    .center-text {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+</style>
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        @* main menu *@
+        <div>
+            @* main menu *@
+            <div class="mainmenu">
+
+                @* Seach book *@
+
+                @* read data from database and show them to table *@
+                <div>
+                    <table class="table table-bordered">
+                        <thead>
+                            @* header *@
+                            <tr>
+                                <th>Mã thành viên</th>
+                                <th>Mã sách</th>
+                                <th>Tiêu đề</th>
+                                <th>Ngày mượn</th>
+                                <th>Ngày trả</th>
+                                <th>Xác nhận</th>
+
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @* body *@
+                            @foreach (var book in borrowingRecord)
+                            {
+                                if (!IsVisible(book))
+                                    continue;
+
+                                <tr>
+                                    <td>@book.UserId</td>
+                                    <td>@book.BookId</td>
+                                    <td>@(book.Book?.Title ?? "Unknown")</td>
+                                    <td>@book.BorrowedDate.ToString("dd/MM/yyyy")</td>
+                                    <td>@book.DueDate.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" @onclick="@(() => HandleSubmit(book.Id))">
+                                            Xác nhận trả sách
+                                        </MudButton>
+                                    </td>
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+                </div>@* read data from database and show them to table *@
+            </div> @* main menu *@
+        </div>
+    </Authorized>
+</AuthorizeView>
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    public string Filter { get; set; }
+
+    public bool IsVisible(BorrowingRecord borrowingRecords)
+    {
+        if (string.IsNullOrEmpty(Filter))
+            return true;
+
+        // if (borrowingRecords.BookTitle.Contains(Filter, StringComparison.OrdinalIgnoreCase))
+        //     return true;
+
+        if (borrowingRecords.UserId.ToString().StartsWith(Filter))
+            return true;
+
+        return false;
+    }
+
+    // get all book list
+    List<Book> booklist = new List<Book>();
+    List<Book> booklistAvailable = new List<Book>();
+    List<BorrowingRecord> borrowingRecord = new List<BorrowingRecord>();
+
+    public BorrowingRecord currentbook { get; set; } = new();
+    public DateTime currentDate { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var authenticationState = await authenticationStateTask;
+
+        //get Available List
+        booklistAvailable = await UserService.GetBookListAvailableAsync();
+
+        borrowingRecord = await UserService.GetLoanBookRequestListAsync(authenticationState.User.Identity.Name);
+        //getbook list
+        booklist = await UserService.GetBookListAsync(0);
+    }
+
+
+    async Task<string> Booktitle(int? id)
+    {
+
+        var bookList = await UserService.GetBookListAsync(id);
+
+        var bookTitles = bookList.Select(bookInfo => bookInfo.Title);
+        string concatenatedTitles = string.Join(", ", bookTitles);
+        return concatenatedTitles;
+    }
+
+
+    protected override void OnInitialized()
+    {
+        currentDate = DateTime.Now;
+    }
+
+
+    async Task HandleSubmit(int id)
+    {
+        var authenticationState = await authenticationStateTask;
+
+        //addUpdateRequestDateAsync
+        await UserService.UpdateReturnedDateAsync(currentbook, id);
+        navigationManager.NavigateTo(navigationManager.Uri, forceLoad: true);
+    }
+    async Task HandleSubmit2(int id)
+    {
+        var authenticationState = await authenticationStateTask;
+
+        //addUpdateRequestDateAsync
+        //add
+        await UserService.UpdateRequestDateAsync(currentbook, id);
+        navigationManager.NavigateTo(navigationManager.Uri, forceLoad: true);
+    }
+
+
+}

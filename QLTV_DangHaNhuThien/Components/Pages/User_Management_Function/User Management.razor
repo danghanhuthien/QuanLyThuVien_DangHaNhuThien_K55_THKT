@@ -1,0 +1,158 @@
+﻿@page "/UserManagement"
+
+@using QLTV_DangHaNhuThien.Components.Layout
+@using Microsoft.AspNetCore.Authorization
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@inject IConnectDapper ConnectDapper
+@attribute [Authorize(Roles = "Admin")]
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+
+<MudPaper Class="center-text" Elevation="4">
+    <MudText Typo="Typo.h3" Class="center-text" Style="font-family: 'Times New Roman';">
+        Quản lý thành viên
+    </MudText>
+</MudPaper>
+
+<style>
+    .center-text {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+</style>
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        <div class="inputsearch-container">
+            <input type="text" name="text" class="inputsearch" placeholder="Tìm kiếm thành viên..." @bind="searchKeyword" @bind:event="oninput">
+
+            <span class="iconsearch" @onclick="SearchBooks">
+                <svg width="19px" height="19px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path opacity="1" d="M14 5H20" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path opacity="1" d="M14 8H17" stroke="#000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M21 11.5C21 16.75 16.75 21 11.5 21C6.25 21 2 16.75 2 11.5C2 6.25 6.25 2 11.5 2" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> <path opacity="1" d="M22 22L20 20" stroke="#000" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+            </span>
+        </div>
+        <div class="mainpage">
+
+            @if (userlist == null || userlist.Count == 0)
+            {
+                <div aria-label="Orange and tan hamster running in a metal wheel" role="img" class="wheel-and-hamster">
+                    <div class="wheel"></div>
+                    <div class="hamster">
+                        <div class="hamster__body">
+                            <div class="hamster__head">
+                                <div class="hamster__ear"></div>
+                                <div class="hamster__eye"></div>
+                                <div class="hamster__nose"></div>
+                            </div>
+                            <div class="hamster__limb hamster__limb--fr"></div>
+                            <div class="hamster__limb hamster__limb--fl"></div>
+                            <div class="hamster__limb hamster__limb--br"></div>
+                            <div class="hamster__limb hamster__limb--bl"></div>
+                            <div class="hamster__tail"></div>
+                        </div>
+                    </div>
+                    <div class="spoke"></div>
+                </div>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" @onclick="Createuser">Thêm</MudButton>
+            
+                @* read data from database and show them to table *@                        
+                <MudContainer>
+                    <MudGrid>
+                        @foreach (var user in userlist)
+                        {
+                            <MudItem xs="12" md="4">
+                                <MudPaper Class="p-3 mb-4" Elevation="2">
+                                    <MudGrid>
+                                        <MudItem xs="12" Class="text-center mb-3">
+                                            <MudImage Src="@GetUserImage(user.Role)" Alt="@user.FullName" Elevation="25" Class="card-img-top fixed-size-image" />
+                                            <style>
+                                                .fixed-size-image {
+                                                    width: 150px;
+                                                    height: 150px;
+                                                    object-fit: cover;
+                                                }
+                                            </style>
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.h5" Align="Align.Center">@user.FullName</MudText>
+                                            <MudText><strong>Tên đăng nhập:</strong> @user.Username</MudText>
+                                            <MudText><strong>Email:</strong> @user.Email</MudText>
+                                            <MudText><strong>Vai trò:</strong> @user.Role</MudText>
+                                            <div class="buttoncud-container">
+                                                <div style="display: flex; gap: 150px;">
+                                                    <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Edit" Color="Color.Tertiary" @onclick="@(() => Edituser(user.Id))">Sửa</MudButton>
+                                                    <MudButton Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Delete" Color="Color.Error" @onclick="@(() => Deleteuser(user.Id))">Xóa</MudButton>
+                                                </div>
+                                            </div>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudPaper>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudContainer>
+
+                @* read data from database and show them to table *@
+  
+
+            }
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code {
+
+
+
+    public string searchKeyword { get; set; } = string.Empty;
+    async Task SearchBooks()
+    {
+        if (string.IsNullOrEmpty(searchKeyword))
+        {
+            userlist = await ConnectDapper.GetUserListAsync();
+        }
+        else
+        {
+            userlist = (await ConnectDapper.SearchUsersAsync(searchKeyword)).ToList();
+        }
+    }
+	// Get image based on user role
+	string GetUserImage(string role)
+	{
+		return role == "Admin" ? "/Image/anhadmin2.png" : role == "Member" ? "/Image/anhuserb.jpg" : "/Image/default.jpg";
+	}
+    // get all book list
+    List<User>? userlist = new List<User>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        //getbook list
+        userlist = await ConnectDapper.GetUserListAsync();
+    }
+
+    //event Create, Update and Delete
+    void Edituser(int id)
+    {
+        navigationManager.NavigateTo($"/UserManagement_CUD/{id}");
+    }
+
+
+    void Createuser()
+    {
+        navigationManager.NavigateTo("/UserManagement_CUD");
+    }
+
+
+    async Task Deleteuser(int id)
+    {
+        await ConnectDapper.DeleteNewUserAsync(id);
+        navigationManager.NavigateTo(navigationManager.Uri, forceLoad: true);
+
+    }
+
+
+}

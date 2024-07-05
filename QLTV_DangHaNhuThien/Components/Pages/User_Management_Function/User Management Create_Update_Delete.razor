@@ -1,0 +1,133 @@
+﻿@page "/UserManagement_CUD"
+@page "/UserManagement_CUD/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager navigationManager
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@inject IConnectDapper ConnectDapper
+@* @attribute [Authorize(Roles = "Admin")] *@
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using System.ComponentModel.DataAnnotations
+
+
+@if (Id is null)
+{
+    <PageTitle>New User</PageTitle>
+}
+else
+{
+    <PageTitle>Edit User</PageTitle>
+}
+<MudPaper Class="center-text" Elevation="4">
+    <MudText Typo="Typo.h3" Class="center-text" Style="font-family: 'Times New Roman';">
+        Đăng ký và phân quyền
+    </MudText>
+</MudPaper>
+
+<style>
+    .center-text {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+</style>
+<div class="add_form">
+    <AuthorizeView Roles="Admin" Context="authContext">
+
+        <Authorized>
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudImage Src="Image/anh1.png" Alt="Mony the dog" Elevation="25" Class="rounded-lg" Style="width: 100%; max-width: 500px; height: auto;" />
+                </MudItem>
+
+                <MudCard Class="p-4" Style="max-width: 600px; margin: 50px 0 0 auto; width: 100%; float: right;">
+
+                    <div class="addbook_form_body" style="padding: 20px;">
+                        <EditForm OnSubmit="HandleSubmit" Model="@currentuser">
+                            <div class="form-outline mb-4">
+                                <div class="user-image text-center mb-3">
+                                    <img src="@GetUserImage(currentuser.Role)" class="card-img-top fixed-size-image" alt="@currentuser.FullName">
+                                    <style>
+                                        .fixed-size-image {
+                                            width: 150px;
+                                            height: 150px;
+                                            object-fit: cover;
+                                        }
+                                    </style>
+                                </div>
+                                <label>Tên đăng nhập</label>
+                                <InputText @bind-Value="currentuser.Username" type="text" class="form-control" />
+
+                                <label>Mật khẩu</label>
+                                <InputText @bind-Value="currentuser.Password" type="text" class="form-control" />
+
+                                <label>Họ và tên</label>
+                                <InputText @bind-Value="currentuser.FullName" type="text" class="form-control" />
+
+                                <label>Email</label>
+                                <InputText @bind-Value="currentuser.Email" type="text" class="form-control" />
+
+                                <label>Vài trò</label>
+                                <InputSelect @bind-Value="currentuser.Role" class="form-select" aria-label="Default select example">
+                                    <option selected>Lựa chọn vai trò</option>
+                                    <option value="Admin">Admin</option>
+                                    <option value="Member">Member</option>
+
+                                </InputSelect>
+
+                            </div>
+                            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" ButtonType="ButtonType.Submit" Class="btn btn-primary">
+                                Thêm
+                            </MudButton>
+                        </EditForm>
+                    </div>
+                </MudCard>
+                
+            </MudGrid>
+            
+        </Authorized>
+        <NotAuthorized>
+            <div class="alert alert-danger">
+                Báo công an đó nhé, giải tán ngay.
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    public User currentuser { get; set; } = new();
+    // Get image based on user role
+    string GetUserImage(string role)
+    {
+        return role == "Admin" ? "/Image/anhadmin2.png" : role == "Member" ? "/Image/anhuserb.jpg" : "/Image/default.jpg";
+    }
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id is not null)
+        {
+            var edituser = await ConnectDapper.GetUserByIdAsync((int)Id);
+            if (edituser is not null)
+                currentuser = edituser;
+        }
+    }
+
+    async Task HandleSubmit()
+    {
+
+        if (Id is not null)
+        {
+            // Cập nhật người dùng
+            await ConnectDapper.UpdateNewUserAsync(currentuser, (int)Id);
+        }
+        else
+        {
+            // Thêm người dùng mới
+            await ConnectDapper.AddNewUserAsync(currentuser);
+        }
+
+        navigationManager.NavigateTo("/UserManagement", forceLoad: true);
+    }
+}

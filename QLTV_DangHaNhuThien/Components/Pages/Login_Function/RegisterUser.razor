@@ -1,0 +1,105 @@
+﻿@page "/Register"
+@page "/UserManagement_Register/{Id:int}"
+@inject NavigationManager navigationManager
+@using QLTV_DangHaNhuThien.Components.Layout
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@inject IConnectDapper ConnectDapper
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+
+
+
+<EditForm OnSubmit="HandleSubmit" Model="@currentuser">
+    <DataAnnotationsValidator />
+    <MudGrid>
+        <MudItem xs="12" sm="7">
+            <MudCard>
+                <MudCardContent>
+                    <MudTextField Label="Username"
+                                  @bind-Value="currentuser.Username" For="@(() => currentuser.Username)" />
+                    <MudTextField Label="Password" Class="mt-3"
+                                  @bind-Value="currentuser.Password" For="@(() => currentuser.Password)" InputType="InputType.Password" />
+                    <MudTextField Label="FullName" Class="mt-3"
+                                  @bind-Value="currentuser.FullName" For="@(() => currentuser.FullName)" />
+                    <MudTextField Label="Email" Class="mt-3"
+                                  @bind-Value="currentuser.Email" For="@(() => currentuser.Email)" />
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Add" Color="Color.Primary" ButtonType="ButtonType.Submit" Class="ml-auto">
+                        Tạo
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Home" Color="Color.Warning" ButtonType="ButtonType.Submit" Class="ml-auto" @onclick="@(() => navigationManager.NavigateTo("/"))">
+                        Trờ về
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudPaper Class="pa-4 mud-height-full">
+                <MudText Typo="Typo.subtitle2">Validation Summary</MudText>
+                @if (success)
+                {
+                    <MudText Color="Color.Success">Success</MudText>
+                }
+                else
+                {
+                    <MudText Color="@Color.Error">
+                        <ValidationSummary />
+                    </MudText>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12">
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                Fill out the form correctly to see the success message.
+            </MudText>
+        </MudItem>
+    </MudGrid>
+</EditForm>
+
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+
+    [SupplyParameterFromForm]
+    public User currentuser { get; set; } = new();
+
+    //add function
+    async Task HandleSubmit()
+    {
+        //add user
+        currentuser.Role = "Member";
+        await ConnectDapper.AddNewUserAsync(currentuser);
+        navigationManager.NavigateTo("/", forceLoad: true);
+    }
+    RegisterAccountForm model = new RegisterAccountForm();
+    bool success;
+
+    public class RegisterAccountForm
+    {
+        [Required]
+        public string Username { get; set; }
+
+        [Required]
+        public string Password { get; set; }
+
+        [Required]
+        public string FullName { get; set; }
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+
+
+    }
+
+    private void OnValidSubmit(EditContext context)
+    {
+        success = true;
+        StateHasChanged();
+    }
+}

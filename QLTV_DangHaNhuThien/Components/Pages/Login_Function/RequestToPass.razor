@@ -1,0 +1,98 @@
+﻿@page "/forgotpassword"
+@using Dapper
+@using System.Data.SqlClient
+@using System.Net.Mail
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@inject IConnectDapper ConnectDapper
+@inject NavigationManager navigationManager
+
+<MudContainer MaxWidth="MaxWidth.Small">
+    <EditForm Model="@user" OnValidSubmit="HandleForgotPassword" FormName="forgotPasswordFormUnique">
+        <MudCard>
+            <MudCardContent>
+                <MudText Typo="Typo.h5" GutterBottom>Lấy Lại Mật Khẩu</MudText>
+                <InputText @bind-Value="user.Email" type="email" class="input-email" placeholder="Nhập email của bạn" />
+                <ValidationMessage For="() => user.Email" />
+                <MudText Typo="Typo.caption" Color="Color.Error">@errorMessage</MudText>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Send" Color="Color.Primary" ButtonType="ButtonType.Submit" Class="submit">
+                    Gửi
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </EditForm>
+</MudContainer>
+
+
+@code {
+
+    private string? errorMessage;
+
+    [SupplyParameterFromForm]
+    public User user { get; set; } = new();
+
+    private async Task HandleForgotPassword()
+    {
+        errorMessage = null; // Reset error message
+
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            errorMessage = "Email không được để trống.";
+            return;
+        }
+
+        var userAccount = await ConnectDapper.GetUserByEmail(user.Email);
+
+        if (userAccount != null)
+        {
+            // Tạo mật khẩu mới
+            var newPassword = GenerateRandomPassword();
+            userAccount.Password = newPassword;
+
+            // Cập nhật mật khẩu mới vào cơ sở dữ liệu
+            await ConnectDapper.UpdateUserPassword(userAccount);
+
+            // Gửi mật khẩu mới qua email
+            SendEmail(userAccount.Email, newPassword);
+
+            navigationManager.NavigateTo("/");
+        }
+    }
+
+    private string GenerateRandomPassword()
+    {
+        // Logic để tạo mật khẩu ngẫu nhiên
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, 8).Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    private void SendEmail(string toEmail, string newPassword)
+    {
+        var fromEmail = "danghanhuthien@gmail.com"; // Email của bạn
+        var fromPassword = "vblfhmbzztigfojc"; // Mật khẩu email của bạn
+        var smtpClient = new SmtpClient("smtp.gmail.com")
+            {
+                Port = 587,
+                Credentials = new System.Net.NetworkCredential(fromEmail, fromPassword),
+                EnableSsl = true,
+            };
+
+        var mailMessage = new MailMessage
+            {
+                From = new MailAddress(fromEmail),
+                Subject = "Khôi phục mật khẩu",
+                Body = $"Mật khẩu mới của bạn là: {newPassword}",
+                IsBodyHtml = true,
+            };
+        mailMessage.To.Add(toEmail);
+
+        smtpClient.Send(mailMessage);
+    }
+
+    public class ForgotPasswordModel
+    {
+        public string Email { get; set; }
+    }
+}

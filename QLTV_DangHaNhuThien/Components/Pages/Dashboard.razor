@@ -1,0 +1,150 @@
+﻿@page "/infRequest"
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+@inject IUserService UserService
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Member")]
+
+<MudPaper Class="center-text" Elevation="4">
+    <MudText Typo="Typo.h3" Class="center-text" Style="font-family: 'Times New Roman';">
+        Thông tin các yêu cầu của bạn
+    </MudText>
+</MudPaper>
+
+<style>
+    .center-text {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+</style>
+
+<AuthorizeView Roles="Member">
+    <Authorized>
+        <div>
+            @* main menu *@
+            <div class="mainmenu">
+
+                @* Seach book *@
+                <div>
+                </div>
+                @* read data from database and show them to table *@
+                <MudTable Items="borrowingRecord" Class="mud-table" T="BorrowingRecord" Hover="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>Mã thành viên</MudTh>
+                        <MudTh>Mã sách</MudTh>
+                        <MudTh>Tiêu đề</MudTh>
+                        <MudTh>Ngày mượn</MudTh>
+                        <MudTh>Ngày trả</MudTh>
+                        <MudTh>Ghi chú</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="book">
+                        <MudTd DataLabel="Mã thành viên">@book.UserId</MudTd>
+                        <MudTd DataLabel="Mã sách">@book.BookId</MudTd>
+                        <MudTd DataLabel="Tiêu đề">@book.Book?.Title</MudTd>
+                        <MudTd DataLabel="Ngày mượn">@book.BorrowedDate.ToString("dd/MM/yyyy")</MudTd>
+                        <MudTd DataLabel="Ngày trả">@book.DueDate.ToString("dd/MM/yyyy")</MudTd>
+                        <MudTd DataLabel="Ghi chú">@book.Status</MudTd>
+                    </RowTemplate>
+                </MudTable>
+
+
+                <style>
+                    .mud-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        border: 1px solid #dee2e6;
+                    }
+
+                        .mud-table thead th {
+                            background-color: #f8f9fa;
+                            font-weight: bold;
+                            text-align: left;
+                            padding: 8px;
+                            border: 1px solid #dee2e6;
+                        }
+
+                        .mud-table tbody td {
+                            padding: 8px;
+                            border: 1px solid #dee2e6;
+                            text-align: left;
+                        }
+
+                        .mud-table tbody tr {
+                            border: 1px solid #dee2e6;
+                        }
+
+                            .mud-table tbody tr:hover {
+                                background-color: #f1f1f1;
+                            }
+
+                </style>
+
+                
+                
+                
+                @* read data from database and show them to table *@
+            </div> @* main menu *@
+        </div>
+    </Authorized>
+</AuthorizeView>
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+
+    // get all book list
+    List<Book> booklist = new List<Book>();
+    List<Book> booklistAvailable = new List<Book>();
+    List<BorrowingRecord> borrowingRecord = new List<BorrowingRecord>();
+
+    public BorrowingRecord currentbook { get; set; } = new();
+    public DateTime currentDate { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var authenticationState = await authenticationStateTask;
+
+        //get Available List
+        booklistAvailable = await UserService.GetBookListAvailableAsync();
+
+        // Lấy danh sách các bản ghi mượn sách
+        var loanBookList = await UserService.GetLoanBookListAsync(authenticationState.User.Identity.Name);
+
+        // Lấy danh sách các yêu cầu mượn sách
+        var loanBookRequestList = await UserService.GetLoanBookRequestListAsync(authenticationState.User.Identity.Name);
+
+        // Lấy danh sách đã trả
+        var loanBookReturnList = await UserService.GetLoanBookReturnListAsync(authenticationState.User.Identity.Name);
+
+        // Gộp hai danh sách lại với nhau
+        borrowingRecord.AddRange(loanBookList);
+        borrowingRecord.AddRange(loanBookRequestList);
+        borrowingRecord.AddRange(loanBookReturnList);
+
+
+        //getbook list
+        booklist = await UserService.GetBookListAsync(0);
+    }
+
+
+    async Task<string> Booktitle(int? id)
+    {
+
+        var bookList = await UserService.GetBookListAsync(id);
+
+        var bookTitles = bookList.Select(bookInfo => bookInfo.Title);
+        string concatenatedTitles = string.Join(", ", bookTitles);
+        return  concatenatedTitles;
+    }
+
+
+
+}

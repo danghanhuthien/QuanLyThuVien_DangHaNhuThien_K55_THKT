@@ -1,0 +1,71 @@
+﻿@page "/bookreturned"
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@using QLTV_DangHaNhuThien.Components.Models
+@using System.Net.Http.Json
+@inject IConnectDapper ConnectDapper
+@rendermode InteractiveServer
+@inject IUserService UserService
+
+<MudPaper Class="center-text" Elevation="4">
+    <MudText Typo="Typo.h3" Class="center-text" Style="font-family: 'Times New Roman';">
+        Danh sách thành viên mượn sách
+    </MudText>
+</MudPaper>
+
+<style>
+    .center-text {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+</style>
+<MudTable Items="@users" Dense="true" Hover="true" Bordered="true" Striped="true" @bind-SelectedItem="selectedItem1">
+    <ToolBarContent>
+        <MudSpacer />
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh><MudTableSortLabel SortBy="new Func<BorrowingRecord, object>(x=>x.UserId)">Mã thành viên</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<BorrowingRecord, object>(x=>x.BookId)">Mã sách</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<BorrowingRecord, object>(x=>x.BorrowedDate)">Ngày mượn</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<BorrowingRecord, object>(x=>x.DueDate)">Ngày trả</MudTableSortLabel></MudTh>
+        <MudTh><MudTableSortLabel SortBy="new Func<BorrowingRecord, object>(x=>x.Status)">Ghi chú</MudTableSortLabel></MudTh>
+
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Mã thành viên">@context.UserId</MudTd>
+        <MudTd DataLabel="Mã sách">@context.BookId</MudTd>
+        <MudTd DataLabel="Ngày mượn">@context.BorrowedDate.ToString("dd/MM/yyyy")</MudTd>
+        <MudTd DataLabel="Ngày trả">@context.DueDate.ToString("dd/MM/yyyy")</MudTd>
+        <MudTd DataLabel="Ghi chú">@context.Status</MudTd>
+        <MudTd DataLabel="Hành động">
+            <MudButton Variant="Variant.Filled" Color="Color.Error" @onclick="@(() => DeleteRecord(context.UserId ?? 0, context.BookId ?? 0))">
+                Xóa
+            </MudButton>
+
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+    </PagerContent>
+</MudTable>
+
+@code {
+
+    private async Task DeleteRecord(int userId, int bookId)
+    {
+        await UserService.DeleteBorrowingRecordAsync(userId, bookId);
+        users = users.Where(r => !(r.UserId == userId && r.BookId == bookId)).ToList();
+    }
+    private bool enabled = true;
+    private string searchString1 = "";
+    private BorrowingRecord selectedItem1 = null;
+    private HashSet<BorrowingRecord> selectedItems = new HashSet<BorrowingRecord>();
+
+    private IEnumerable<BorrowingRecord> users = new List<BorrowingRecord>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await ConnectDapper.GetAllUsersAsync();
+    }
+}

@@ -1,0 +1,101 @@
+﻿@page "/BookDetail/{id}"
+@using Microsoft.AspNetCore.Authorization
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@inject NavigationManager navigationManager
+@inject IConnectDapper ConnectDapper
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Member")]
+@inject IJSRuntime JSRuntime
+
+
+<MudPaper Class="center-text" Elevation="4">
+    <MudText Typo="Typo.h3" Class="center-text" Style="font-family: 'Times New Roman';">
+        Chi tiết sách
+    </MudText>
+</MudPaper>
+
+<style>
+    .center-text {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+    }
+</style>
+<MudContainer Class="mt-4">
+    @if (book != null)
+    {
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudCard>
+                    <MudCardMedia Image="@GetImageSourceFromBase64(book.ImagePath)" Alt="Book image" />
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="8">
+                <MudCard>
+                    <MudCardContent>
+                        <MudText Typo="Typo.h5">@book.Title</MudText>
+                        <MudText><strong>Tác giả:</strong> @book.Author</MudText>
+                        <MudText><strong>Nhà xuất bản:</strong> @book.Publisher</MudText>
+                        <MudText><strong>Thể loại:</strong> @book.Category</MudText>
+                        <MudText><strong>Mô tả:</strong> @book.Description</MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Favorite" Color="Color.Success" @onclick="@(() => HandleSubmit(book.Id))">
+                            Mượn sách
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Close" Color="Color.Secondary" @onclick="@(() => navigationManager.NavigateTo("/Bookloan"))">
+                            Quay lại
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    [Parameter]
+    public string Id { get; set; }
+
+    private Book book;  // Initialize book object
+
+    protected override async Task OnInitializedAsync()
+    {
+	    try
+	    {
+		    int bookId = Convert.ToInt32(Id);  // Ensure valid ID format
+
+			book = await ConnectDapper.GetBookByIdAsync(bookId);
+
+		    if (book == null)
+		    {
+			    // Display message if book not found
+		    }
+	    }
+	    catch (FormatException)
+	    {
+		    // Handle invalid ID format (optional, can display a message)
+	    }
+    }
+    async Task HandleSubmit(int id)
+    {
+	    var authenticationState = await authenticationStateTask; 
+	    //Navigate to ChoseDateLoan
+	    navigationManager.NavigateTo($"/Chosedate_CUD/{id}");
+
+    }
+
+    // Phương thức chuyển đổi từ chuỗi Base64 thành đường dẫn URL của hình ảnh
+    public string GetImageSourceFromBase64(string base64String)
+    {
+        if (string.IsNullOrEmpty(base64String))
+            return "";
+
+        return $"data:image/png;base64,{base64String}";
+    }
+}

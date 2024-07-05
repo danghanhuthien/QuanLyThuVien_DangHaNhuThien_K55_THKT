@@ -1,0 +1,189 @@
+﻿@page "/DashboardExample"
+@inject IJSRuntime JSRuntime
+@inject NavigationManager navigationManager
+@rendermode InteractiveServer
+
+@inject IConnectDapper ConnectDapper
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authorization
+@using QLTV_DangHaNhuThien.Components.UseDapper
+@attribute [Authorize(Roles = "Admin,Member")]
+
+
+<PageTitle>Dashboard</PageTitle>
+<AuthorizeView Roles="Admin">
+    <Authorized>
+        @* main menu *@
+        <div>
+            @* main menu *@
+            <div class="mainmenu">
+
+                @* Seach book *@
+                <div class="form-group">
+                    <input class="form-control" type="text" placeholder="Filter..."
+                           @bind="Filter"
+                           @bind:event="oninput">
+                </div>
+                @* read data from database and show them to table *@
+                <div>
+                    <table class="table table-bordered">
+                        <thead>
+                            @* header *@
+                            <tr>
+                                <th>Mã thành viên</th>
+                                <th>Mã sách</th>
+                                <th>Tiêu đề</th>
+                                <th>Ngày mượn</th>
+                                <th>Ngày trả</th>
+
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @* body *@
+                            @foreach (var book in borrowingRecord)
+                            {
+                                if (!IsVisible(book))
+                                    continue;
+                                <tr>
+                                    <td>@book.UserId</td>
+                                    <td>@book.BookId</td>
+                                    <td>@(book.Book?.Title ?? "Unknown") </td>
+                                    <td>@book.BorrowedDate.ToString("dd/MM/yyyy")</td>
+                                    <td>@book.DueDate.ToString("dd/MM/yyyy")</td>
+
+                                    <td>
+                                        <button class="btn btn-primary" @onclick="@(() => HandleSubmit(book.Id))">Xác nhận trả sách</button>
+
+                                    </td>
+                                </tr>
+
+
+                            }
+
+                        </tbody>
+
+                    </table>
+                </div>@* read data from database and show them to table *@
+            </div> @* main menu *@
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+<AuthorizeView Roles="Member">
+    <Authorized>
+        <div>
+            @* main menu *@
+            <div class="mainmenu">
+
+                @* Seach book *@
+                <div>
+                </div>
+                @* read data from database and show them to table *@
+                <div>
+                    <table class="table table-bordered">
+                        <thead>
+                            @* header *@
+                            <tr>
+                                <th>Mã thành viên</th>
+                                <th>Mã sách</th>
+                                <th>Tiêu đề</th>
+                                <th>Ngày mượn</th>
+                                <th>Ngày trả</th>
+
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @* body *@
+                            @foreach (var book in borrowingRecord)
+                            {
+
+
+
+                                if (!IsVisible(book))
+                                    continue;
+                                <tr>
+                                    <td>@book.UserId</td>
+                                    <td>@book.BookId</td>
+                                    <td>@(book.Book?.Title ?? "Unknown")</td>
+                                    <td>@book.BorrowedDate.ToString("dd/MM/yyyy")</td>
+                                    <td>@book.DueDate.ToString("dd/MM/yyyy")</td>
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+                </div>@* read data from database and show them to table *@
+            </div> @* main menu *@
+        </div>
+    </Authorized>
+</AuthorizeView>
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    public string Filter { get; set; }
+
+    public bool IsVisible(BorrowingRecord borrowingRecords)
+    {
+        if (string.IsNullOrEmpty(Filter))
+            return true;
+
+        // if (borrowingRecords.BookTitle.Contains(Filter, StringComparison.OrdinalIgnoreCase))
+        //     return true;
+
+        if (borrowingRecords.UserId.ToString().StartsWith(Filter))
+            return true;
+
+        return false;
+    }
+
+    // get all book list
+    List<Book> booklist = new List<Book>();
+    List<Book> booklistAvailable = new List<Book>();
+    List<BorrowingRecord> borrowingRecord = new List<BorrowingRecord>();
+
+    public BorrowingRecord currentbook { get; set; } = new();
+    public DateTime currentDate { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var authenticationState = await authenticationStateTask;
+
+        //get Available List
+        booklistAvailable = await ConnectDapper.GetBookListAvailableAsync();
+
+        borrowingRecord = await ConnectDapper.GetLoanBookListAsync(authenticationState.User.Identity.Name);
+        //getbook list
+        booklist = await ConnectDapper.GetBookListAsync(0);
+    }
+
+
+    async Task<string> Booktitle(int? id)
+    {
+
+        var bookList = await ConnectDapper.GetBookListAsync(id);
+
+        var bookTitles = bookList.Select(bookInfo => bookInfo.Title);
+        string concatenatedTitles = string.Join(", ", bookTitles);
+        return concatenatedTitles;
+    }
+
+    async Task HandleSubmit(int id)
+    {
+        var authenticationState = await authenticationStateTask;
+
+        //add
+        await ConnectDapper.UpdateReturnedDateAsync(currentbook, id);
+        navigationManager.NavigateTo(navigationManager.Uri, forceLoad: true);
+    }
+
+
+}
